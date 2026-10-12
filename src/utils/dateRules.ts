@@ -27,6 +27,7 @@ export function addMonthsWithClamping(date: Date, monthsToAdd: number): Date {
  * Example: 5 Oct 2026 -> 4 Nov 2026
  */
 export function calculateCourseEndDate(startDateStr: string, courseId: CourseId): string {
+  if (!startDateStr) startDateStr = getTodayIso();
   const [year, month, day] = startDateStr.split('-').map(Number);
   const start = new Date(year, month - 1, day);
 
@@ -56,6 +57,7 @@ export function calculateCourseEndDate(startDateStr: string, courseId: CourseId)
  * Example: 4 Nov 2026 -> 4 Feb 2027
  */
 export function calculateMaterialAccessExpiry(courseEndDateStr: string, bufferMonths = 3): string {
+  if (!courseEndDateStr) return '';
   const [year, month, day] = courseEndDateStr.split('-').map(Number);
   const courseEnd = new Date(year, month - 1, day);
   const expiry = addMonthsWithClamping(courseEnd, bufferMonths);
@@ -83,6 +85,7 @@ export function computeEnrolmentStatus(startDateStr: string, courseEndDateStr: s
  * Days remaining until a target date. Returns negative if past.
  */
 export function getDaysRemaining(targetDateStr: string): number {
+  if (!targetDateStr) return 0;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const [year, month, day] = targetDateStr.split('-').map(Number);
@@ -103,15 +106,46 @@ export function getTodayIso(): string {
 }
 
 /**
- * Formats ISO date to human readable e.g. "14 Apr 2025" or "31 Jan 2027"
+ * Formats ISO date to human readable e.g. "12 Oct 2026"
  */
 export function formatDisplayDate(dateStr: string): string {
   if (!dateStr) return '';
-  const [year, month, day] = dateStr.split('-').map(Number);
+  const parts = dateStr.split('-');
+  if (parts.length < 3) return dateStr;
+  const [year, month, day] = parts.map(Number);
   const date = new Date(year, month - 1, day);
-  return date.toLocaleDateString('en-GB', {
+  return date.toLocaleDateString(undefined, {
     day: 'numeric',
     month: 'short',
     year: 'numeric'
   });
+}
+
+/**
+ * Real live formatted Date string e.g. "Mon, 12 Oct 2026"
+ */
+export function getRealDateFormatted(d: Date = new Date()): string {
+  return d.toLocaleDateString(undefined, {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric'
+  });
+}
+
+/**
+ * Real live formatted Time string e.g. "08:21 AM"
+ */
+export function getRealTimeFormatted(d: Date = new Date()): string {
+  return d.toLocaleTimeString(undefined, {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+/**
+ * Real live Date + Time timestamp e.g. "12 Oct 2026, 08:21 AM"
+ */
+export function getRealDateTimeString(d: Date = new Date()): string {
+  return `${getRealDateFormatted(d)}, ${getRealTimeFormatted(d)}`;
 }

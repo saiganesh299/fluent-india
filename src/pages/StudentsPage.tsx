@@ -28,7 +28,13 @@ export const StudentsPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   
   // Selected student for right-side drawer
-  const [selectedStudentId, setSelectedStudentId] = useState<string>('stu-1');
+  const [selectedStudentId, setSelectedStudentId] = useState<string>(students[0]?.id || '');
+
+  React.useEffect(() => {
+    if (!selectedStudentId && students.length > 0) {
+      setSelectedStudentId(students[0].id);
+    }
+  }, [students, selectedStudentId]);
 
   // Modals
   const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
@@ -46,7 +52,7 @@ export const StudentsPage: React.FC = () => {
     stream: 'Academic' as 'Academic' | 'General Training',
     courseId: 'longterm' as CourseId,
     startDate: new Date().toISOString().split('T')[0],
-    group: 'October Morning'
+    group: 'Regular Morning'
   });
 
   const query = (localSearch || globalSearch).toLowerCase();
@@ -66,7 +72,7 @@ export const StudentsPage: React.FC = () => {
     });
   }, [students, enrolments, query, courseFilter, statusFilter]);
 
-  const selectedStudent = students.find(s => s.id === selectedStudentId) || students[0];
+  const selectedStudent = students.find(s => s.id === selectedStudentId) || (students.length > 0 ? students[0] : null);
   const selectedEnrolment = enrolments.find(e => e.studentId === selectedStudent?.id);
 
   const handleAddStudentSubmit = (e: React.FormEvent) => {
@@ -248,8 +254,29 @@ export const StudentsPage: React.FC = () => {
                   })}
                   {filteredStudents.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="py-8 text-center text-[#41634E]">
-                        No students found matching your filters.
+                      <td colSpan={6} className="py-12 text-center">
+                        <div className="flex flex-col items-center justify-center max-w-sm mx-auto text-[#41634E] space-y-2.5">
+                          <div className="w-10 h-10 rounded-full bg-[#DFEFFF] flex items-center justify-center text-[#17492F]">
+                            <UserPlus className="w-5 h-5" />
+                          </div>
+                          <p className="font-bold text-sm text-[#17492F]">
+                            {students.length === 0 ? "No students registered yet" : "No students match your filter"}
+                          </p>
+                          <p className="text-xs text-[#41634E] leading-relaxed">
+                            {students.length === 0
+                              ? "Your student directory is ready for real enrolments. Click '+ Add Student' above to onboard candidates with customized target bands and course schedules."
+                              : `No candidates found matching "${query}". Try clearing search or status filters.`}
+                          </p>
+                          {students.length === 0 && (
+                            <button
+                              onClick={() => setIsAddStudentOpen(true)}
+                              className="mt-1 inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#EFF583] hover:bg-[#E5EC6A] text-[#17492F] border border-[#CAD7CD] rounded-xl text-xs font-bold transition shadow-xs"
+                            >
+                              <UserPlus className="w-3.5 h-3.5" />
+                              <span>+ Add First Student</span>
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   )}
@@ -259,8 +286,8 @@ export const StudentsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Column (4 cols): Detailed Student Profile Panel matching Screenshot 2 */}
-        {selectedStudent && (
+        {/* Right Column (4 cols): Detailed Student Profile Panel or Empty State Card */}
+        {selectedStudent ? (
           <div className="lg:col-span-4 bg-[#F5F3E8] rounded-2xl border border-[#CAD7CD] p-5 shadow-xs space-y-5">
             {/* Header: Large Avatar + Name */}
             <div className="flex items-start justify-between">
@@ -286,7 +313,7 @@ export const StudentsPage: React.FC = () => {
               </div>
               <div className="flex justify-between">
                 <span className="text-[#41634E]">Group</span>
-                <span className="font-semibold text-[#17492F]">{selectedEnrolment?.group || 'October Morning'}</span>
+                <span className="font-semibold text-[#17492F]">{selectedEnrolment?.group || 'Regular Morning'}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-[#41634E]">Course ends</span>
@@ -384,6 +411,23 @@ export const StudentsPage: React.FC = () => {
                 )}
               </div>
             </div>
+          </div>
+        ) : (
+          <div className="lg:col-span-4 bg-[#F5F3E8] rounded-2xl border border-[#CAD7CD] p-8 shadow-xs flex flex-col items-center justify-center text-center space-y-3 min-h-[360px]">
+            <div className="w-14 h-14 rounded-2xl bg-[#DFEFFF] border border-[#CAD7CD] flex items-center justify-center text-[#17492F]">
+              <UserPlus className="w-7 h-7" />
+            </div>
+            <h3 className="font-extrabold text-[#17492F] text-base">No Student Selected</h3>
+            <p className="text-xs text-[#41634E] max-w-xs leading-relaxed">
+              Select a candidate from the roster or onboard a new student to view their enrolment details, extend material access, or manage deadlines.
+            </p>
+            <button
+              onClick={() => setIsAddStudentOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-[#17492F] hover:bg-[#0E301F] text-white rounded-xl text-xs font-bold transition shadow-xs mt-2"
+            >
+              <UserPlus className="w-4 h-4" />
+              <span>+ Add First Student</span>
+            </button>
           </div>
         )}
       </div>

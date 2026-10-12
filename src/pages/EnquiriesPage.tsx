@@ -25,7 +25,13 @@ export const EnquiriesPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedEnquiryId, setSelectedEnquiryId] = useState<string>(enquiries[0]?.id || '');
 
-  const selectedEnquiry = enquiries.find(e => e.id === selectedEnquiryId) || enquiries[0];
+  React.useEffect(() => {
+    if (!selectedEnquiryId && enquiries.length > 0) {
+      setSelectedEnquiryId(enquiries[0].id);
+    }
+  }, [enquiries, selectedEnquiryId]);
+
+  const selectedEnquiry = enquiries.find(e => e.id === selectedEnquiryId) || (enquiries.length > 0 ? enquiries[0] : null);
   const [notes, setNotes] = useState<string>(selectedEnquiry?.tutorNotes || '');
 
   // Keep notes synced
@@ -182,8 +188,18 @@ export const EnquiriesPage: React.FC = () => {
                   })}
                   {filteredEnquiries.length === 0 && (
                     <tr>
-                      <td colSpan={4} className="py-8 text-center text-[#41634E]">
-                        No enquiries found.
+                      <td colSpan={4} className="py-12 text-center">
+                        <div className="flex flex-col items-center justify-center max-w-sm mx-auto text-[#41634E] space-y-2.5">
+                          <div className="w-10 h-10 rounded-full bg-[#DFEFFF] flex items-center justify-center text-[#17492F]">
+                            <Mail className="w-5 h-5" />
+                          </div>
+                          <p className="font-bold text-sm text-[#17492F]">No enquiries at this time</p>
+                          <p className="text-xs text-[#41634E] leading-relaxed">
+                            {enquiries.length === 0
+                              ? "Prospective candidates who fill out the contact form on your public website will appear here in real time."
+                              : "No enquiries match your search or filter."}
+                          </p>
+                        </div>
                       </td>
                     </tr>
                   )}
@@ -193,8 +209,8 @@ export const EnquiriesPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Right Column (5 cols): Detailed Enquiry Drawer & Notes */}
-        {selectedEnquiry && (
+        {/* Right Column (5 cols): Detailed Enquiry Drawer & Notes or Empty State Card */}
+        {selectedEnquiry ? (
           <div className="lg:col-span-5 bg-[#F5F3E8] rounded-2xl border border-[#CAD7CD] p-5 shadow-xs space-y-4">
             <div className="flex items-start justify-between pb-3 border-b border-[#CAD7CD]/60">
               <div>
@@ -288,6 +304,16 @@ export const EnquiriesPage: React.FC = () => {
                 *Note: Creating a student profile prepares their account. Lead is marked Enrolled once course enrolment is confirmed.
               </p>
             </div>
+          </div>
+        ) : (
+          <div className="lg:col-span-5 bg-[#F5F3E8] rounded-2xl border border-[#CAD7CD] p-8 shadow-xs flex flex-col items-center justify-center text-center space-y-3 min-h-[340px]">
+            <div className="w-14 h-14 rounded-2xl bg-[#DFEFFF] border border-[#CAD7CD] flex items-center justify-center text-[#17492F]">
+              <Mail className="w-7 h-7" />
+            </div>
+            <h3 className="font-extrabold text-[#17492F] text-base">No Enquiry Selected</h3>
+            <p className="text-xs text-[#41634E] max-w-xs leading-relaxed">
+              Select an admissions lead from the table to review contact details, log follow-up calls, or onboard as an enrolled candidate.
+            </p>
           </div>
         )}
       </div>

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Bell, Eye, Menu, X, CheckCircle, Clock, AlertCircle } from 'lucide-react';
 import { useDemoData } from '../../context/DemoDataContext';
 import { Link, useNavigate } from 'react-router-dom';
+import { getRealDateFormatted, getRealTimeFormatted } from '../../utils/dateRules';
 
 interface TopBarProps {
   onToggleMobileMenu?: () => void;
@@ -13,6 +14,23 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleMobileMenu, searchTerm, 
   const { settings, enquiries, submissions } = useDemoData();
   const [showNotifications, setShowNotifications] = useState(false);
   const navigate = useNavigate();
+
+  // Real live date and time state (ticking every second)
+  const [currentDateTime, setCurrentDateTime] = useState({
+    dateStr: getRealDateFormatted(),
+    timeStr: getRealTimeFormatted()
+  });
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date();
+      setCurrentDateTime({
+        dateStr: getRealDateFormatted(now),
+        timeStr: getRealTimeFormatted(now)
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const unreadEnquiries = enquiries.filter(e => e.status === 'New').length;
   const unreviewedSubs = submissions.filter(s => s.status === 'Submitted').length;
@@ -52,10 +70,10 @@ export const TopBar: React.FC<TopBarProps> = ({ onToggleMobileMenu, searchTerm, 
 
       {/* Right Controls */}
       <div className="flex items-center gap-3 shrink-0">
-        {/* Demo Preview Badge */}
-        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#EFF583] border border-[#CAD7CD] text-[#17492F] text-xs font-semibold shadow-xs">
-          <Eye className="w-3.5 h-3.5 text-[#17492F]" />
-          <span>Demo Preview</span>
+        {/* Live Real Date & Time Badge */}
+        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/95 border border-[#CAD7CD] text-[#17492F] text-xs font-bold shadow-xs">
+          <Clock className="w-3.5 h-3.5 text-[#17492F]" />
+          <span>{currentDateTime.dateStr} • {currentDateTime.timeStr}</span>
         </div>
 
         {/* Notifications Bell */}

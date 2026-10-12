@@ -370,6 +370,18 @@ export const WebsiteContentPage: React.FC = () => {
               </div>
             ))}
           </div>
+
+          {testimonials.length === 0 && (
+            <div className="bg-[#F5F3E8] rounded-2xl border border-[#CAD7CD] p-8 text-center space-y-2.5 shadow-xs">
+              <div className="w-12 h-12 rounded-2xl bg-[#DFEFFF] border border-[#CAD7CD] flex items-center justify-center text-[#17492F] mx-auto">
+                <Star className="w-6 h-6" />
+              </div>
+              <h3 className="font-bold text-sm text-[#17492F]">No Student Testimonials Published</h3>
+              <p className="text-xs text-[#41634E] max-w-sm mx-auto">
+                Testimonials from successful IELTS candidates will appear here. Permission to publish is strictly required prior to homepage display.
+              </p>
+            </div>
+          )}
         </div>
       )}
 

@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   GraduationCap,
   Calendar,
@@ -34,13 +35,28 @@ export const CoursesPage: React.FC = () => {
   // Modals
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [isEnrolModalOpen, setIsEnrolModalOpen] = useState(false);
-  const [selectedEnrolment, setSelectedEnrolment] = useState<Enrolment | null>(enrolments[0] || null);
+  const [selectedEnrolmentId, setSelectedEnrolmentId] = useState<string>(enrolments[0]?.id || '');
+
+  useEffect(() => {
+    if (!selectedEnrolmentId && enrolments.length > 0) {
+      setSelectedEnrolmentId(enrolments[0].id);
+    }
+  }, [enrolments, selectedEnrolmentId]);
+
+  const selectedEnrolment = enrolments.find(e => e.id === selectedEnrolmentId) || (enrolments.length > 0 ? enrolments[0] : null);
 
   // New Enrolment Form State
   const [enrolStudentId, setEnrolStudentId] = useState<string>(students[0]?.id || '');
+
+  useEffect(() => {
+    if (!enrolStudentId && students.length > 0) {
+      setEnrolStudentId(students[0].id);
+    }
+  }, [students, enrolStudentId]);
+
   const [enrolCourseId, setEnrolCourseId] = useState<CourseId>('longterm');
   const [enrolStartDate, setEnrolStartDate] = useState<string>(getTodayIso());
-  const [enrolGroup, setEnrolGroup] = useState<string>('October Morning');
+  const [enrolGroup, setEnrolGroup] = useState<string>('Regular Morning');
   const [enrolSchedule, setEnrolSchedule] = useState<string>('Mon, Wed, Fri 9:00 AM – 11:00 AM');
   const [enrolClassLink, setEnrolClassLink] = useState<string>('https://meet.google.com/xyz-abcd-efg');
 
@@ -258,7 +274,7 @@ export const CoursesPage: React.FC = () => {
                       return (
                         <tr
                           key={enr.id}
-                          onClick={() => setSelectedEnrolment(enr)}
+                          onClick={() => setSelectedEnrolmentId(enr.id)}
                           className={`cursor-pointer transition ${
                             isSelected ? 'bg-[#EFF583]/50 font-medium' : 'hover:bg-white/60'
                           }`}
@@ -285,14 +301,42 @@ export const CoursesPage: React.FC = () => {
                         </tr>
                       );
                     })}
+                    {filteredEnrolments.length === 0 && (
+                      <tr>
+                        <td colSpan={6} className="py-12 text-center">
+                          <div className="flex flex-col items-center justify-center max-w-sm mx-auto text-[#41634E] space-y-2.5">
+                            <div className="w-10 h-10 rounded-full bg-[#DFEFFF] flex items-center justify-center text-[#17492F]">
+                              <GraduationCap className="w-5 h-5" />
+                            </div>
+                            <p className="font-bold text-sm text-[#17492F]">
+                              {enrolments.length === 0 ? "No active enrolments yet" : "No enrolments match your filter"}
+                            </p>
+                            <p className="text-xs text-[#41634E] leading-relaxed">
+                              {enrolments.length === 0
+                                ? "When students are enrolled in Long-Term, Short-Term, or Crash courses, their start dates, deadlines, and material buffers appear here."
+                                : `No enrolments found matching "${searchEnrolment}". Try adjusting your filters.`}
+                            </p>
+                            {enrolments.length === 0 && (
+                              <button
+                                onClick={() => setIsEnrolModalOpen(true)}
+                                className="mt-1 inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#EFF583] hover:bg-[#E5EC6A] text-[#17492F] border border-[#CAD7CD] rounded-xl text-xs font-bold transition shadow-xs"
+                              >
+                                <UserPlus className="w-3.5 h-3.5" />
+                                <span>+ Enrol First Student</span>
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
             </div>
           </div>
 
-          {/* Right Column (4 cols): Enrolment Details Panel matching Screenshot 3 */}
-          {selectedEnrolment && (
+          {/* Right Column (4 cols): Enrolment Details Panel or Empty State Card */}
+          {selectedEnrolment ? (
             <div className="lg:col-span-4 bg-[#F5F3E8] rounded-2xl border border-[#CAD7CD] p-5 shadow-xs space-y-4">
               <div>
                 <h3 className="text-base font-extrabold text-[#17492F]">Enrolment Details</h3>
@@ -357,6 +401,16 @@ export const CoursesPage: React.FC = () => {
                 Save Changes
               </button>
             </div>
+          ) : (
+            <div className="lg:col-span-4 bg-[#F5F3E8] rounded-2xl border border-[#CAD7CD] p-8 shadow-xs flex flex-col items-center justify-center text-center space-y-3 min-h-[340px]">
+              <div className="w-14 h-14 rounded-2xl bg-[#DFEFFF] border border-[#CAD7CD] flex items-center justify-center text-[#17492F]">
+                <GraduationCap className="w-7 h-7" />
+              </div>
+              <h3 className="font-extrabold text-[#17492F] text-base">No Enrolment Selected</h3>
+              <p className="text-xs text-[#41634E] max-w-xs leading-relaxed">
+                Select an enrolment record from the directory to review batch timing, calculated completion dates, and material access buffer.
+              </p>
+            </div>
           )}
         </div>
       )}
@@ -366,17 +420,34 @@ export const CoursesPage: React.FC = () => {
         <form onSubmit={handleCreateEnrolmentSubmit} className="space-y-4 text-xs">
           <div>
             <label className="block font-bold text-[#17492F] mb-1">Select Student *</label>
-            <select
-              value={enrolStudentId}
-              onChange={(e) => setEnrolStudentId(e.target.value)}
-              className="w-full px-3 py-2 bg-white rounded-xl border border-[#CAD7CD] text-xs text-[#17492F]"
-            >
-              {students.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name} ({s.email}) — Target Band {s.targetBand}
-                </option>
-              ))}
-            </select>
+            {students.length === 0 ? (
+              <div className="p-3 bg-[#EFF583]/40 border border-[#CAD7CD] rounded-xl text-xs space-y-2">
+                <p className="font-bold text-[#17492F]">No students registered in the academy yet.</p>
+                <p className="text-[#41634E] text-[11px]">
+                  Please onboard candidates in the Students section first before creating course enrolments.
+                </p>
+                <Link
+                  to="/admin/students"
+                  onClick={() => setIsEnrolModalOpen(false)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#17492F] text-white rounded-lg font-bold text-xs hover:bg-[#0E301F]"
+                >
+                  <UserPlus className="w-3.5 h-3.5" />
+                  <span>Go to Students & Onboard</span>
+                </Link>
+              </div>
+            ) : (
+              <select
+                value={enrolStudentId}
+                onChange={(e) => setEnrolStudentId(e.target.value)}
+                className="w-full px-3 py-2 bg-white rounded-xl border border-[#CAD7CD] text-xs text-[#17492F]"
+              >
+                {students.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} ({s.email}) — Target Band {s.targetBand}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">

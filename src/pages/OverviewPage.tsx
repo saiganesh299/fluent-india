@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useOutletContext } from 'react-router-dom';
 import {
   Users,
@@ -11,15 +11,16 @@ import {
   ArrowRight,
   ChevronRight,
   Calendar,
-  Sparkles
+  Sparkles,
+  Inbox
 } from 'lucide-react';
 import { useDemoData } from '../context/DemoDataContext';
 import { StatusBadge } from '../components/common/StatusBadge';
-import { getDaysRemaining } from '../utils/dateRules';
+import { getDaysRemaining, getRealDateFormatted, getRealTimeFormatted, formatDisplayDate } from '../utils/dateRules';
 import { Modal } from '../components/common/Modal';
 
 export const OverviewPage: React.FC = () => {
-  const { students, enrolments, submissions, enquiries, addStudent, addLesson, createAssignmentTemplate } = useDemoData();
+  const { students, enrolments, submissions, enquiries, addStudent } = useDemoData();
   const navigate = useNavigate();
   const { searchTerm } = useOutletContext<{ searchTerm: string }>() || { searchTerm: '' };
 
@@ -28,34 +29,43 @@ export const OverviewPage: React.FC = () => {
   const [newStudentEmail, setNewStudentEmail] = useState('');
   const [newStudentCourse, setNewStudentCourse] = useState<'longterm' | 'shortterm' | 'crash'>('longterm');
 
-  // Compute live metrics
-  const activeEnrolments = enrolments.filter(e => e.status === 'ongoing');
-  const activeStudentCount = new Set(activeEnrolments.map(e => e.studentId)).size || students.length;
-  const awaitingReviewList = submissions.filter(s => s.status === 'Submitted');
-  const newEnquiriesList = enquiries.filter(e => e.status === 'New');
+  // Live real date and time state
+  const [currentDateTime, setCurrentDateTime] = useState({
+    dateStr: getRealDateFormatted(),
+    timeStr: getRealTimeFormatted()
+  });
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date();
+      setCurrentDateTime({
+        dateStr: getRealDateFormatted(now),
+        timeStr: getRealTimeFormatted(now)
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Compute live metrics from actual data
+  const activeEnrolments = (enrolments || []).filter(e => e.status === 'ongoing');
+  const activeStudentCount = new Set(activeEnrolments.map(e => e.studentId)).size || (students || []).length;
+  const awaitingReviewList = (submissions || []).filter(s => s.status === 'Submitted');
+  const newEnquiriesList = (enquiries || []).filter(e => e.status === 'New');
   
-  // Access expiring soon (within 35 days)
-  const expiringSoonList = enrolments
+  // Access expiring soon (within 30 days)
+  const expiringSoonList = (enrolments || [])
     .filter(e => e.status === 'material_only')
     .map(e => ({
       ...e,
       daysLeft: getDaysRemaining(e.materialAccessUntil)
     }))
-    .filter(e => e.daysLeft > 0 && e.daysLeft <= 35)
+    .filter(e => e.daysLeft > 0 && e.daysLeft <= 30)
     .sort((a, b) => a.daysLeft - b.daysLeft);
 
   // Grouped active counts
-  const longTermCount = enrolments.filter(e => e.courseId === 'longterm' && (e.status === 'ongoing' || e.status === 'material_only')).length;
-  const shortTermCount = enrolments.filter(e => e.courseId === 'shortterm' && (e.status === 'ongoing' || e.status === 'material_only')).length;
-  const crashCount = enrolments.filter(e => e.courseId === 'crash' && (e.status === 'ongoing' || e.status === 'material_only')).length;
-
-  // Format today's date
-  const todayFormatted = new Date().toLocaleDateString('en-GB', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric'
-  });
+  const longTermCount = (enrolments || []).filter(e => e.courseId === 'longterm' && (e.status === 'ongoing' || e.status === 'material_only')).length;
+  const shortTermCount = (enrolments || []).filter(e => e.courseId === 'shortterm' && (e.status === 'ongoing' || e.status === 'material_only')).length;
+  const crashCount = (enrolments || []).filter(e => e.courseId === 'crash' && (e.status === 'ongoing' || e.status === 'material_only')).length;
 
   const handleQuickAddStudent = (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,7 +83,7 @@ export const OverviewPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header Banner */}
+      {/* Header Banner with Real Live Date and Time */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <div>
           <h1 className="text-2xl md:text-3xl font-extrabold text-[#17492F] tracking-tight">
@@ -83,11 +93,14 @@ export const OverviewPage: React.FC = () => {
             Here’s what’s happening with your students and courses today.
           </p>
         </div>
-        <div className="text-left sm:text-right">
-          <p className="text-xs md:text-sm font-bold text-[#17492F]">{todayFormatted}</p>
-          <p className="text-[11px] text-[#41634E] font-medium flex items-center sm:justify-end gap-1">
+        <div className="text-left sm:text-right bg-white/70 sm:bg-transparent p-2.5 sm:p-0 rounded-xl border sm:border-none border-[#CAD7CD]/60">
+          <p className="text-xs md:text-sm font-extrabold text-[#17492F] flex items-center sm:justify-end gap-1.5">
+            <Clock className="w-4 h-4 text-[#17492F]" />
+            <span>{currentDateTime.dateStr} • {currentDateTime.timeStr}</span>
+          </p>
+          <p className="text-[11px] text-[#41634E] font-medium flex items-center sm:justify-end gap-1 mt-0.5">
             <Sparkles className="w-3 h-3 text-[#17492F]" />
-            Keep up the great work!
+            Live IELTS Academy Session
           </p>
         </div>
       </div>
@@ -139,10 +152,10 @@ export const OverviewPage: React.FC = () => {
             </div>
             <div>
               <p className="text-xs font-semibold text-[#41634E]">New Enquiries</p>
-              <h2 className="text-2xl font-black text-[#17492F] tracking-tight">{newEnquiriesList.length || enquiries.length}</h2>
+              <h2 className="text-2xl font-black text-[#17492F] tracking-tight">{newEnquiriesList.length}</h2>
             </div>
           </div>
-          <p className="text-[11px] text-[#41634E] mt-3">Since your last login</p>
+          <p className="text-[11px] text-[#41634E] mt-3">From website contact form</p>
         </div>
 
         {/* Access Expiring Soon */}
@@ -158,7 +171,7 @@ export const OverviewPage: React.FC = () => {
               <div>
                 <p className="text-xs font-semibold text-[#41634E]">Access Expiring Soon</p>
                 <h2 className="text-2xl font-black text-[#17492F] tracking-tight">
-                  {expiringSoonList.length || 4}
+                  {expiringSoonList.length}
                 </h2>
               </div>
             </div>
@@ -168,7 +181,7 @@ export const OverviewPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Quick actions bar (Yellow tint from Screenshot 1) */}
+      {/* Quick actions bar */}
       <div className="bg-[#EFF583]/40 border border-[#CAD7CD] rounded-2xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-xs">
         <div>
           <h2 className="text-sm font-bold text-[#17492F]">Quick actions</h2>
@@ -201,7 +214,7 @@ export const OverviewPage: React.FC = () => {
 
       {/* 2-Column Main Workspace Area */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Column (7 cols): Review Queue & Recent Enquiries */}
+        {/* Left Column (8 cols): Review Queue & Recent Enquiries */}
         <div className="lg:col-span-8 space-y-6">
           {/* Assignment review queue */}
           <div className="bg-[#F5F3E8] rounded-2xl border border-[#CAD7CD] p-5 shadow-xs">
@@ -219,67 +232,63 @@ export const OverviewPage: React.FC = () => {
                 to="/admin/reviews"
                 className="text-xs font-bold text-[#17492F] hover:underline flex items-center gap-1"
               >
-                <span>View all {awaitingReviewList.length} assignments</span>
+                <span>View all assignments</span>
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
 
-            {/* Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="text-[11px] font-bold text-[#41634E] uppercase border-b border-[#CAD7CD]/60">
-                    <th className="pb-2.5 font-bold">Student</th>
-                    <th className="pb-2.5 font-bold">Assignment</th>
-                    <th className="pb-2.5 font-bold">Submitted</th>
-                    <th className="pb-2.5 font-bold">Status</th>
-                    <th className="pb-2.5 text-right font-bold">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#CAD7CD]/30 text-xs">
-                  {awaitingReviewList.slice(0, 4).map((sub) => (
-                    <tr key={sub.id} className="hover:bg-white/50 transition">
-                      <td className="py-3 pr-2">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-full bg-[#D6E6F8] text-[#1B4D89] font-bold text-[11px] flex items-center justify-center shrink-0">
-                            {sub.studentName.split(' ').map(n => n[0]).join('').slice(0, 2)}
-                          </div>
-                          <div>
-                            <p className="font-bold text-[#17492F] leading-tight">{sub.studentName}</p>
-                            <p className="text-[10px] text-[#41634E] leading-tight">{sub.courseName.split('(')[0]}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-3 px-2">
-                        <p className="font-bold text-[#17492F]">{sub.assignmentTitle}</p>
-                        <p className="text-[10px] text-[#41634E]">IELTS {sub.module}</p>
-                      </td>
-                      <td className="py-3 px-2 text-[#41634E] whitespace-nowrap">
-                        {sub.submittedAt}
-                      </td>
-                      <td className="py-3 px-2">
-                        <StatusBadge status={sub.status} />
-                      </td>
-                      <td className="py-3 pl-2 text-right">
-                        <Link
-                          to={`/admin/reviews/${sub.id}`}
-                          className="px-3 py-1 bg-[#17492F] hover:bg-[#0E301F] text-white rounded-lg text-xs font-semibold transition inline-block shadow-xs"
-                        >
-                          Review
-                        </Link>
-                      </td>
+            {/* Table or Empty State */}
+            {awaitingReviewList.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="text-[11px] font-bold text-[#41634E] uppercase border-b border-[#CAD7CD]/60">
+                      <th className="pb-2.5 font-bold">Student</th>
+                      <th className="pb-2.5 font-bold">Assignment</th>
+                      <th className="pb-2.5 font-bold">Submitted</th>
+                      <th className="pb-2.5 font-bold">Status</th>
+                      <th className="pb-2.5 text-right font-bold">Action</th>
                     </tr>
-                  ))}
-                  {awaitingReviewList.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="py-6 text-center text-xs text-[#41634E]">
-                        All assignments reviewed! No pending submissions in the queue.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-[#CAD7CD]/30 text-xs">
+                    {awaitingReviewList.slice(0, 4).map((sub) => (
+                      <tr key={sub.id} className="hover:bg-white/50 transition">
+                        <td className="py-3 pr-2">
+                          <p className="font-bold text-[#17492F] leading-tight">{sub.studentName}</p>
+                          <p className="text-[10px] text-[#41634E] leading-tight">{sub.courseName.split('(')[0]}</p>
+                        </td>
+                        <td className="py-3 px-2">
+                          <p className="font-bold text-[#17492F]">{sub.assignmentTitle}</p>
+                          <p className="text-[10px] text-[#41634E]">IELTS {sub.module}</p>
+                        </td>
+                        <td className="py-3 px-2 text-[#41634E] whitespace-nowrap">
+                          {sub.submittedAt}
+                        </td>
+                        <td className="py-3 px-2">
+                          <StatusBadge status={sub.status} />
+                        </td>
+                        <td className="py-3 pl-2 text-right">
+                          <Link
+                            to={`/admin/reviews/${sub.id}`}
+                            className="px-3 py-1 bg-[#17492F] hover:bg-[#0E301F] text-white rounded-lg text-xs font-semibold transition inline-block shadow-xs"
+                          >
+                            Review
+                          </Link>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="py-8 text-center bg-white/50 rounded-xl border border-dashed border-[#CAD7CD] p-6 space-y-2">
+                <Inbox className="w-8 h-8 text-[#41634E]/50 mx-auto" />
+                <p className="text-xs font-bold text-[#17492F]">No assignments awaiting review</p>
+                <p className="text-[11px] text-[#41634E]">
+                  When students submit essay responses or speaking recordings, they will appear here for grading.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Recent Enquiries */}
@@ -303,42 +312,52 @@ export const OverviewPage: React.FC = () => {
               </Link>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="text-[11px] font-bold text-[#41634E] uppercase border-b border-[#CAD7CD]/60">
-                    <th className="pb-2.5">Name</th>
-                    <th className="pb-2.5">Email</th>
-                    <th className="pb-2.5">Course Interested In</th>
-                    <th className="pb-2.5">Received</th>
-                    <th className="pb-2.5 text-right">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#CAD7CD]/30">
-                  {enquiries.slice(0, 4).map((enq) => (
-                    <tr
-                      key={enq.id}
-                      onClick={() => navigate('/admin/enquiries')}
-                      className="hover:bg-white/50 cursor-pointer transition"
-                    >
-                      <td className="py-2.5 font-bold text-[#17492F]">{enq.name}</td>
-                      <td className="py-2.5 text-[#41634E]">{enq.email}</td>
-                      <td className="py-2.5 text-[#17492F] font-medium">{enq.courseInterestedIn}</td>
-                      <td className="py-2.5 text-[#41634E] whitespace-nowrap">{enq.receivedAt.split(' ')[0]}</td>
-                      <td className="py-2.5 text-right">
-                        <StatusBadge status={enq.status} />
-                      </td>
+            {(enquiries || []).length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="text-[11px] font-bold text-[#41634E] uppercase border-b border-[#CAD7CD]/60">
+                      <th className="pb-2.5">Name</th>
+                      <th className="pb-2.5">Email</th>
+                      <th className="pb-2.5">Course Interested In</th>
+                      <th className="pb-2.5">Received</th>
+                      <th className="pb-2.5 text-right">Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="divide-y divide-[#CAD7CD]/30">
+                    {(enquiries || []).slice(0, 4).map((enq) => (
+                      <tr
+                        key={enq.id}
+                        onClick={() => navigate('/admin/enquiries')}
+                        className="hover:bg-white/50 cursor-pointer transition"
+                      >
+                        <td className="py-2.5 font-bold text-[#17492F]">{enq.name}</td>
+                        <td className="py-2.5 text-[#41634E]">{enq.email}</td>
+                        <td className="py-2.5 text-[#17492F] font-medium">{enq.courseInterestedIn}</td>
+                        <td className="py-2.5 text-[#41634E] whitespace-nowrap">{enq.receivedAt.split(' ')[0]}</td>
+                        <td className="py-2.5 text-right">
+                          <StatusBadge status={enq.status} />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="py-8 text-center bg-white/50 rounded-xl border border-dashed border-[#CAD7CD] p-6 space-y-2">
+                <Mail className="w-8 h-8 text-[#41634E]/50 mx-auto" />
+                <p className="text-xs font-bold text-[#17492F]">No enquiries yet</p>
+                <p className="text-[11px] text-[#41634E]">
+                  Inquiries received from your website contact form will appear here.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Right Column (4 cols): Active Enrolments & Access Reminders */}
         <div className="lg:col-span-4 space-y-6">
-          {/* Active Enrolments (Replacing "Current batches") */}
+          {/* Active Enrolments */}
           <div className="bg-[#F5F3E8] rounded-2xl border border-[#CAD7CD] p-5 shadow-xs">
             <div className="flex items-center gap-2.5 mb-4 pb-2 border-b border-[#CAD7CD]/50">
               <div className="p-2 rounded-lg bg-[#DCF3E2] text-[#17492F]">
@@ -362,12 +381,12 @@ export const OverviewPage: React.FC = () => {
                   </div>
                   <div>
                     <h3 className="text-xs font-bold text-[#17492F]">Long-Term Course</h3>
-                    <p className="text-[11px] text-[#41634E]">1 month course</p>
+                    <p className="text-[11px] text-[#41634E]">1 calendar month</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="text-right">
-                    <span className="font-extrabold text-sm text-[#17492F]">{longTermCount || 24}</span>
+                    <span className="font-extrabold text-sm text-[#17492F]">{longTermCount}</span>
                     <span className="text-[10px] text-[#41634E] block">students</span>
                   </div>
                   <ChevronRight className="w-4 h-4 text-[#41634E] group-hover:translate-x-1 transition" />
@@ -385,12 +404,12 @@ export const OverviewPage: React.FC = () => {
                   </div>
                   <div>
                     <h3 className="text-xs font-bold text-[#17492F]">Short-Term Course</h3>
-                    <p className="text-[11px] text-[#41634E]">15 days course</p>
+                    <p className="text-[11px] text-[#41634E]">15 days duration</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="text-right">
-                    <span className="font-extrabold text-sm text-[#17492F]">{shortTermCount || 16}</span>
+                    <span className="font-extrabold text-sm text-[#17492F]">{shortTermCount}</span>
                     <span className="text-[10px] text-[#41634E] block">students</span>
                   </div>
                   <ChevronRight className="w-4 h-4 text-[#41634E] group-hover:translate-x-1 transition" />
@@ -408,12 +427,12 @@ export const OverviewPage: React.FC = () => {
                   </div>
                   <div>
                     <h3 className="text-xs font-bold text-[#17492F]">Crash Course</h3>
-                    <p className="text-[11px] text-[#41634E]">1 week course</p>
+                    <p className="text-[11px] text-[#41634E]">7 days duration</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="text-right">
-                    <span className="font-extrabold text-sm text-[#17492F]">{crashCount || 8}</span>
+                    <span className="font-extrabold text-sm text-[#17492F]">{crashCount}</span>
                     <span className="text-[10px] text-[#41634E] block">students</span>
                   </div>
                   <ChevronRight className="w-4 h-4 text-[#41634E] group-hover:translate-x-1 transition" />
@@ -430,39 +449,35 @@ export const OverviewPage: React.FC = () => {
               </div>
               <div>
                 <h2 className="text-sm font-bold text-[#17492F]">Access reminders</h2>
-                <p className="text-[11px] text-[#41634E]">Student access will end 3 months after course completion.</p>
+                <p className="text-[11px] text-[#41634E]">Student access ends 3 months after course completion.</p>
               </div>
             </div>
 
-            <div className="space-y-3">
-              {(expiringSoonList.length > 0 ? expiringSoonList.slice(0, 4) : [
-                { id: '1', studentName: 'Dev Patel', courseName: 'Short-Term Course', daysLeft: 18 },
-                { id: '2', studentName: 'Ishita Sen', courseName: 'Crash Course', daysLeft: 26 },
-                { id: '3', studentName: 'Aditya Roy', courseName: 'Long-Term Course', daysLeft: 29 },
-                { id: '4', studentName: 'Kavya Tiwari', courseName: 'Short-Term Course', daysLeft: 30 }
-              ]).map((item: any) => (
-                <div key={item.id} className="flex items-center justify-between text-xs py-1">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-7 h-7 rounded-full bg-[#D6E6F8] text-[#1B4D89] font-bold text-[10px] flex items-center justify-center">
-                      {item.studentName.split(' ').map((n: string) => n[0]).join('').slice(0, 2)}
-                    </div>
+            {expiringSoonList.length > 0 ? (
+              <div className="space-y-3">
+                {expiringSoonList.slice(0, 4).map((item) => (
+                  <div key={item.id} className="flex items-center justify-between text-xs py-1">
                     <div>
                       <p className="font-bold text-[#17492F]">{item.studentName}</p>
                       <p className="text-[10px] text-[#41634E]">{item.courseName.split('(')[0]}</p>
                     </div>
+                    <span className="px-2 py-0.5 rounded-full bg-[#EFF583] text-[#17492F] text-[10px] font-bold border border-[#CAD7CD]">
+                      {item.daysLeft} days left
+                    </span>
                   </div>
-                  <span className="px-2 py-0.5 rounded-full bg-[#EFF583] text-[#17492F] text-[10px] font-bold border border-[#CAD7CD]">
-                    {item.daysLeft} days left
-                  </span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-6 text-center text-[11px] text-[#41634E] italic bg-white/40 rounded-xl p-3">
+                No access expiries approaching in the next 30 days.
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Quick Add Student Modal */}
-      <Modal isOpen={isAddStudentOpen} onClose={() => setIsAddStudentOpen(false)} title="Quick Add New Student">
+      <Modal isOpen={isAddStudentOpen} onClose={() => setIsAddStudentOpen(false)} title="Add Student & Enrol">
         <form onSubmit={handleQuickAddStudent} className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-[#17492F] mb-1">Student Full Name *</label>
@@ -493,9 +508,9 @@ export const OverviewPage: React.FC = () => {
               onChange={(e: any) => setNewStudentCourse(e.target.value)}
               className="w-full px-3 py-2 bg-white rounded-xl border border-[#CAD7CD] text-xs text-[#17492F] focus:outline-none focus:ring-2 focus:ring-[#17492F]/20"
             >
-              <option value="longterm">Long-Term Course (1 month)</option>
+              <option value="longterm">Long-Term Course (1 calendar month)</option>
               <option value="shortterm">Short-Term Course (15 days)</option>
-              <option value="crash">Crash Course (1 week)</option>
+              <option value="crash">Crash Course (7 days)</option>
             </select>
           </div>
           <div className="pt-2 flex justify-end gap-2">

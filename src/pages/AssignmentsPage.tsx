@@ -283,7 +283,7 @@ export const AssignmentsPage: React.FC = () => {
                       <div className="flex items-center gap-4 text-xs text-[#41634E]">
                         <span className="flex items-center gap-1 text-[11px]">
                           <Calendar className="w-3.5 h-3.5" />
-                          <span>Due: 15 Apr 2025</span>
+                          <span>Added: {formatDisplayDate(tpl.createdAt)}</span>
                         </span>
                         <div className="flex items-center gap-2">
                           <span className="flex items-center gap-1 text-[11px] font-bold text-[#17492F]">
@@ -514,6 +514,21 @@ export const AssignmentsPage: React.FC = () => {
                     </tr>
                   );
                 })}
+                {assignedWorks.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="py-12 text-center">
+                      <div className="flex flex-col items-center justify-center max-w-sm mx-auto text-[#41634E] space-y-2">
+                        <div className="w-10 h-10 rounded-full bg-[#DFEFFF] flex items-center justify-center text-[#17492F]">
+                          <FileText className="w-5 h-5" />
+                        </div>
+                        <p className="font-bold text-sm text-[#17492F]">No assigned tasks yet</p>
+                        <p className="text-xs text-[#41634E]">
+                          Go to the Assignment Library tab and click "Assign →" on any prompt template to distribute work to enrolled students.
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -577,6 +592,21 @@ export const AssignmentsPage: React.FC = () => {
                     </td>
                   </tr>
                 ))}
+                {submissions.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="py-12 text-center">
+                      <div className="flex flex-col items-center justify-center max-w-sm mx-auto text-[#41634E] space-y-2">
+                        <div className="w-10 h-10 rounded-full bg-[#DFEFFF] flex items-center justify-center text-[#17492F]">
+                          <CheckCircle className="w-5 h-5" />
+                        </div>
+                        <p className="font-bold text-sm text-[#17492F]">No candidate submissions yet</p>
+                        <p className="text-xs text-[#41634E]">
+                          Student task uploads will appear here immediately upon submission ready for IELTS scoring.
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -620,48 +650,54 @@ export const AssignmentsPage: React.FC = () => {
                 Select Students ({selectedStudentIds.length} selected)
               </label>
               <div className="max-h-48 overflow-y-auto space-y-1.5 p-2 bg-white rounded-xl border border-[#CAD7CD]">
-                {students.map((student) => {
-                  const enrolment = enrolments.find(e => e.studentId === student.id);
-                  const isChecked = selectedStudentIds.includes(student.id);
+                {students.length === 0 ? (
+                  <div className="py-6 text-center text-[#41634E] text-xs">
+                    No registered students in academy roster. Please add students first.
+                  </div>
+                ) : (
+                  students.map((student) => {
+                    const enrolment = enrolments.find(e => e.studentId === student.id);
+                    const isChecked = selectedStudentIds.includes(student.id);
 
-                  // Warning check: Does deadline exceed student's assignment support deadline?
-                  const supportExpired = enrolment && assignDueDate > enrolment.assignmentSupportUntil;
+                    // Warning check: Does deadline exceed student's assignment support deadline?
+                    const supportExpired = enrolment && assignDueDate > enrolment.assignmentSupportUntil;
 
-                  return (
-                    <label
-                      key={student.id}
-                      className={`flex items-center justify-between p-2 rounded-lg cursor-pointer text-xs transition ${
-                        isChecked ? 'bg-[#DCF3E2]' : 'hover:bg-[#F5F3E8]'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => {
-                            if (isChecked) {
-                              setSelectedStudentIds(selectedStudentIds.filter(id => id !== student.id));
-                            } else {
-                              setSelectedStudentIds([...selectedStudentIds, student.id]);
-                            }
-                          }}
-                          className="w-4 h-4 text-[#17492F]"
-                        />
-                        <div>
-                          <p className="font-bold text-[#17492F]">{student.name}</p>
-                          <p className="text-[10px] text-[#41634E]">Support until: {formatDisplayDate(enrolment?.assignmentSupportUntil || '')}</p>
+                    return (
+                      <label
+                        key={student.id}
+                        className={`flex items-center justify-between p-2 rounded-lg cursor-pointer text-xs transition ${
+                          isChecked ? 'bg-[#DCF3E2]' : 'hover:bg-[#F5F3E8]'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {
+                              if (isChecked) {
+                                setSelectedStudentIds(selectedStudentIds.filter(id => id !== student.id));
+                              } else {
+                                setSelectedStudentIds([...selectedStudentIds, student.id]);
+                              }
+                            }}
+                            className="w-4 h-4 text-[#17492F]"
+                          />
+                          <div>
+                            <p className="font-bold text-[#17492F]">{student.name}</p>
+                            <p className="text-[10px] text-[#41634E]">Support until: {formatDisplayDate(enrolment?.assignmentSupportUntil || '')}</p>
+                          </div>
                         </div>
-                      </div>
 
-                      {supportExpired && (
-                        <span className="flex items-center gap-1 text-[10px] text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md font-bold">
-                          <AlertTriangle className="w-3 h-3" />
-                          Exceeds Support
-                        </span>
-                      )}
-                    </label>
-                  );
-                })}
+                        {supportExpired && (
+                          <span className="flex items-center gap-1 text-[10px] text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md font-bold">
+                            <AlertTriangle className="w-3 h-3" />
+                            Exceeds Support
+                          </span>
+                        )}
+                      </label>
+                    );
+                  })
+                )}
               </div>
             </div>
 

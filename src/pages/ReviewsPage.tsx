@@ -156,8 +156,18 @@ export const ReviewsPage: React.FC = () => {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-[#41634E]">
-                    No submissions found matching criteria.
+                  <td colSpan={7} className="py-12 text-center">
+                    <div className="flex flex-col items-center justify-center max-w-sm mx-auto text-[#41634E] space-y-2.5">
+                      <div className="w-10 h-10 rounded-full bg-[#DFEFFF] flex items-center justify-center text-[#17492F]">
+                        <CheckCircle className="w-5 h-5" />
+                      </div>
+                      <p className="font-bold text-sm text-[#17492F]">All caught up!</p>
+                      <p className="text-xs text-[#41634E] leading-relaxed">
+                        {submissions.length === 0
+                          ? "No student submissions are awaiting evaluation. When students complete essays or audio tasks, they will appear in this review queue."
+                          : "No submissions found matching your search or filters."}
+                      </p>
+                    </div>
                   </td>
                 </tr>
               )}
